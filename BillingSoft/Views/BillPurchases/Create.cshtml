@@ -1,0 +1,238 @@
+@model BillingSoft.Models.BillPurchase
+
+@{
+    ViewData["Title"] = "Nueva Factura de Compra";
+}
+
+@{
+    ViewData["TitlePage"] = "Nueva Factura de Compra";
+}
+
+
+<form asp-action="Create">
+    @section ActionButtons{
+        <input type="submit" value="Guardar" class="btn btn-default pull-right" />
+    }
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="panel panel-primary">
+                <div class="panel-heading">Informacion General</div>
+                <div class="panel-body">
+                    <div class="row">
+                        <div class="col-lg-4">
+                            <div class="form-group">
+                                <div class="input-group">
+                                    <span class="input-group-addon">Proveedor</span>
+                                    <input asp-for="NumberBill" class="form-control" placeholder="Burcar por Ruc"/>
+                                    <span asp-validation-for="NumberBill" class="text-danger"></span>
+                                    <span class="input-group-btn">
+                                        <button id="search_supplier" type="button" class="btn btn-default"><i class="fa fa-search"></i></button>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div class="form-group">
+                                <div class="input-group">
+                                    <span class="input-group-addon">Razon Social</span>
+                                    <input id="RazonSocial" type="text" class="form-control" readonly />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div class="form-group">
+                                <div class="input-group">
+                                    <span class="input-group-addon">Fecha</span>
+                                    <input asp-for="Date" class="form-control" />
+                                    <span asp-validation-for="Date" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="panel panel-default">
+                        <div class="panel-body">
+                            <div class="row">
+                                <div class="col-lg-4">
+                                    <div class="form-group">
+                                        <div class="input-group">
+                                            <span class="input-group-addon">Subtotal</span>
+                                            <input asp-for="Subtotal" class="form-control" readonly/>
+                                            <span asp-validation-for="Subtotal" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-4">
+                                    <div class="form-group">
+                                        <div class="input-group">
+                                            <span class="input-group-addon">Iva 14%</span>
+                                            <input asp-for="Iva" class="form-control" readonly />
+                                            <span asp-validation-for="Iva" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-4">
+                                    <div class="form-group">
+                                        <div class="input-group">
+                                            <span class="input-group-addon">Total</span>
+                                            <input asp-for="Total" class="form-control" readonly/>
+                                            <span asp-validation-for="Total" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="panel panel-default">
+                        <div class="panel-body">
+                            <div class="table-responsive form-inline">
+                                <input id="list_detalle" name="list_detalle" type="hidden" />
+                                <table id="tb_fcompra" class="table table-bordered table-striped display" aria-describedby="tabla factura de compra">
+                                    <thead>
+                                        <tr>
+                                            <td style="width: 15%;">Codigo</td>
+                                            <td style="width: 5%;">Cantidad</td>
+                                            <td style="width: auto">Descripcion</td>
+                                            <td>P. Unitario</td>
+                                            <td>Importe</td>
+                                            <td></td>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="body_fact">
+                                        <tr id="tr1">
+                                            <td><input id="1" name="1" type="text" class="form-control td_codigo" style="width: 100%" /><input id="id1" name="id1" type="hidden" /></td>
+                                            <td><input id="ca1" name="ca1" type="number" value="1" class="form-control td_cantidad" style="width: 100%" /></td>
+                                            <td><input id="no1" name="no1" type="text" class="form-control" readonly style="width: 100%" /></td>
+                                            <td><input id="pu1" name="pu1" type="number" value="0" step="0.01" class="form-control td_pu" style="width: 100%" /></td>
+                                            <td><input id="to1" name="to1" type="number" value="0" step="0.01" class="form-control" readonly style="width: 100%" /></td>
+                                            <td><button type="button" id="bt1" class="btn btn-danger btn_eliminar" title="eliminar"><i class="fa fa-trash-o"></i></button></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        @*<div class="form-group">
+            <label asp-for="SupplierID" class="col-md-2 control-label"></label>
+            <div class="col-md-10">
+                <select asp-for="SupplierID" class ="form-control" asp-items="ViewBag.SupplierID"></select>
+            </div>
+        </div>*@
+</form>
+
+<div>
+    <a asp-action="Index">Regresar</a>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script type="text/javascript">
+        $("#search_supplier").on("click", SearchSupplier);
+
+        function SearchSupplier() {
+            var ruc = $("#NumberBill").val();
+            $.ajax({
+                data: { 'ruc': ruc },
+                url: '@Url.Action("GetInfoSupplier", "BillPurchases")',
+                type: 'get',
+                success: function (data) {
+                    if (data == "null") {
+                        $.notify("No existe Proveedor con el Ruc ingresado.", { position: "top center", "className": "error" });
+                        $("#RazonSocial").val("");
+                    } else {
+                        $("#RazonSocial").val(data);
+                    }
+                },
+                error: function (error) {
+                    console.log("entro al error");
+                }
+            });
+        }
+
+        $('#body_fact').on('keydown', '.td_codigo', function (event) {
+            if (event.which == 13 || event.which == 9) {
+                var codigo = $(this).val();
+                var index = this.id;
+                CalcCodigo(codigo, index);
+            }
+        });
+
+        $('#body_fact').on('click', '.btn_eliminar', function (event) {
+            if ($("#tb_fcompra tbody>tr").length > 1) {
+                var index = this.id.substr(2);
+                $('#tr' + index).remove();
+                //CalcTot();
+            }
+            else {
+                console.log("No puede eliminar la única fila");
+                $.notice("No puede eliminar la única fila.", { level: "error" });
+            }
+        });
+
+        function CalcCodigo(codigo, index) {
+            if (codigo != "") {
+                $.ajax({
+                    data: { 'codigo': codigo },
+                    url: '@Url.Action("GetOneProduct", "BillPurchases")',
+                    type: 'get',
+                    success: function (data) {
+                        console.log("Product1", data);
+                        if (data.length != 0) {
+                            $("#id" + index).val(data[0].id);
+                            $("#no" + index).val(data[0].name);
+                            $("#pu" + index).val(data[0].costPrice);
+                            //Si nos encontramos en la ultima fila entonces se agrega una nueva fila 
+                            //a la tabla.
+                            if ($('#tb_fcompra tbody>tr:last')[0].id.substr(2) == index) {
+                                add_row(parseInt(index) + 1);
+                            }
+                            $("#ca" + index).focus();
+                        }else {
+                            $("#no" + index).val("");
+                            $("#pu" + index).val("0");
+                            $("#id" + index).val("");
+                            $.notice("No encontramos el producto.", { level: "error" });
+                        }
+                    },
+                    error: function (error) {
+                        console.log("error Ajax Get Product:"+error.responseText);
+                    }
+                });
+            }
+            else {
+                $("#no" + index).val("");
+                $("#pu" + index).val("0");
+                $("#id" + index).val("");
+                $("#to" + index).val("0");
+                $.notice("No puede dejar en blanco el código.", { level: "warning" });
+                console.log("codigo vacia");
+            }
+        }
+
+        function add_row(param) {
+            var rowCount = parseInt(param);
+            $("#tb_fcompra tbody").append('<tr id="tr' + rowCount + '"> ' +
+                '<td><input id="' + rowCount + '" name="' + rowCount + '" type="text" class="form-control td_codigo" style="width: 100%"/></td><input id="id' + rowCount + '" name="id' + rowCount + '" type="hidden"/></td> ' +
+                '<td><input id="ca' + rowCount + '" name="ca' + rowCount + '" type="number" min="1" value="1" class="form-control td_cantidad" style="width: 100%"/></td> ' +
+                '<td><input id="no' + rowCount + '" name="no' + rowCount + '" type="text" class="form-control" readonly style="width: 100%"/></td> ' +
+                '<td><input id="pu' + rowCount + '" name="pu' + rowCount + '" type="number" value="0" step="0.01" class="form-control td_pu" style="width: 100%"/></td> ' +
+                '<td><input id="to' + rowCount + '" name="to' + rowCount + '" type="number" value="0" step="0.01" class="form-control" readonly style="width: 100%"/></td> ' +
+                '<td><button type="button" id="bt' + rowCount + '" class="btn btn-danger btn_eliminar" title="eliminar"><i class="fa fa-trash-o"></i></button></td> ' +
+                '</tr>');
+        }
+
+    </script>
+}
