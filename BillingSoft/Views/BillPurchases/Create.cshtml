@@ -10,9 +10,6 @@
 
 
 <form asp-action="Create">
-    @section ActionButtons{
-        <input type="submit" value="Guardar" class="btn btn-default pull-right" />
-    }
     <div class="row">
         <div class="col-lg-12">
             <div class="panel panel-primary">
@@ -36,6 +33,8 @@
                                 <div class="input-group">
                                     <span class="input-group-addon">Razon Social</span>
                                     <input id="RazonSocial" type="text" class="form-control" readonly />
+                                    <input asp-for="SupplierID" hidden/>
+                                    <!-- <select asp-for="SupplierID" class ="form-control" asp-items="ViewBag.SupplierID"></select>-->
                                 </div>
                             </div>
                         </div>
@@ -43,7 +42,7 @@
                             <div class="form-group">
                                 <div class="input-group">
                                     <span class="input-group-addon">Fecha</span>
-                                    <input asp-for="Date" class="form-control" />
+                                    <input asp-for="Date" class="form-control" required/>
                                     <span asp-validation-for="Date" class="text-danger"></span>
                                 </div>
                             </div>
@@ -68,7 +67,7 @@
                                 <div class="col-lg-4">
                                     <div class="form-group">
                                         <div class="input-group">
-                                            <span class="input-group-addon">Iva 14%</span>
+                                            <span class="input-group-addon">Iva 12%</span>
                                             <input asp-for="Iva" class="form-control" readonly />
                                             <span asp-validation-for="Iva" class="text-danger"></span>
                                         </div>
@@ -125,17 +124,11 @@
     </div>
     
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-        @*<div class="form-group">
-            <label asp-for="SupplierID" class="col-md-2 control-label"></label>
-            <div class="col-md-10">
-                <select asp-for="SupplierID" class ="form-control" asp-items="ViewBag.SupplierID"></select>
-            </div>
-        </div>*@
+    <div>
+        <a asp-action="Index">Regresar</a>
+        <input type="submit" value="Guardar" class="btn btn-default pull-right" />
+    </div>
 </form>
-
-<div>
-    <a asp-action="Index">Regresar</a>
-</div>
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
@@ -149,15 +142,18 @@
                 url: '@Url.Action("GetInfoSupplier", "BillPurchases")',
                 type: 'get',
                 success: function (data) {
-                    if (data == "null") {
-                        $.notify("No existe Proveedor con el Ruc ingresado.", { position: "top center", "className": "error" });
+                    console.log(data);
+                    if (data.length != 0) {
+                        $("#RazonSocial").val(data[0].name);
+                        $("#SupplierID").val(data[0].id);
+                    } else { 
                         $("#RazonSocial").val("");
-                    } else {
-                        $("#RazonSocial").val(data);
+                        $("#SupplierID").val("");
+                        $.notify("No existe proveedor con el Ruc proporcionado", { position: "top center", "className": "error" });
                     }
                 },
                 error: function (error) {
-                    console.log("entro al error");
+                    console.log("Error al consultar Provedor", error);
                 }
             });
         }
@@ -174,13 +170,91 @@
             if ($("#tb_fcompra tbody>tr").length > 1) {
                 var index = this.id.substr(2);
                 $('#tr' + index).remove();
-                //CalcTot();
+                CalcTot();
             }
             else {
-                console.log("No puede eliminar la única fila");
-                $.notice("No puede eliminar la única fila.", { level: "error" });
+                $.notify("No puede eliminar la única fila.", { position: "top center", "className": "error" });
             }
         });
+
+        //Lost Focus cantidad
+        $('#body_fact').on('focusout', '.td_cantidad', function () {
+            var index = this.id.substr(2);
+            var cant_str = $(this).val();
+            var pu_str = $("#pu" + index).val();
+            ValCantPU(cant_str, pu_str, index);
+        });
+
+        //Lost focus Precio Unitario
+        $('#body_fact').on('focusout', '.td_pu', function () {
+            var index = this.id.substr(2);
+            var pu_str = $(this).val();
+            var cant_str = $("#ca" + index).val();
+            ValCantPU(cant_str, pu_str, index);
+        });
+
+        //Calculo de Precio Unitario
+        function ValCantPU(cant_str, pu_str, index) {
+            if (numberRegex.test(cant_str)) {
+                if (numberRegex.test(pu_str)) {
+                    var ca = parseInt(cant_str);
+                    var pu = parseFloat(pu_str);
+                    $("#to" + index).val((ca * pu).toFixed(2)); //toFixed - to round number
+                    CalcTot();
+                }
+                else {
+                    $("#pu" + index).val("0");
+                    ReportErrorVal();
+                }
+            }
+            else {
+                $("#ca" + index).val("0");
+                ReportErrorVal(index);
+            }
+        }
+
+        function ReportErrorVal(index) {
+            $("#to" + index).val("");
+            CalcTot();
+            $.notify("Ingrese solo numeros validos", { position: "top center", "className": "error" });
+        }
+
+        function CalcTot() {
+            var acum = 0;
+            var tots = "";
+            $("#list_detalle").val("");
+            $("#tb_fcompra tbody tr").each(function () {
+                //list_detalle tiene una lista de todas las filas de la tabla
+                //tots es el campo de referencia ya que permite saber si esa fila tiene los datos completos 
+                // #tots tiene el subtotal
+                tots = parseFloat($("#to" + $(this)[0].id.substr(2)).val());
+                console.log(tots);
+                if (tots > 0) {
+                    acum += tots;
+                    if ($("#list_detalle").val() == "") {
+                        console.log("Detalle vacio");
+                        $("#list_detalle").val($(this)[0].id.substr(2))
+                    }
+                    else {
+                        console.log("Detalle lleno");
+                        $("#list_detalle").val($("#list_detalle").val() + "," + $(this)[0].id.substr(2))
+                    }
+                }
+            });
+            $("#Subtotal").val(acum.toFixed(2).replace(".",","));
+            var subto = parseFloat($("#Subtotal").val());
+            //var descuento = parseFloat($("#id_descuento").val());
+            if (subto > 0) {
+                //if (descuento > 0) {
+                //    subto -= descuento;
+                //}
+                $("#Iva").val((subto * 0.12).toFixed(2).replace(".", ","));
+                $("#Total").val((subto * 1.12).toFixed(2).replace(".", ","));
+            }
+            else {
+                //LimpiarTotales();
+            }
+        }
 
         function CalcCodigo(codigo, index) {
             if (codigo != "") {
@@ -233,6 +307,8 @@
                 '<td><button type="button" id="bt' + rowCount + '" class="btn btn-danger btn_eliminar" title="eliminar"><i class="fa fa-trash-o"></i></button></td> ' +
                 '</tr>');
         }
+
+        var numberRegex = /^[+-]?\d+(\.\d+)?([eE][+-]?\d+)?$/;
 
     </script>
 }

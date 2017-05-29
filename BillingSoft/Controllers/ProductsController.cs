@@ -48,7 +48,7 @@ namespace BillingSoft.Controllers
         // GET: Products/Create
         public IActionResult Create()
         {
-            ViewData["CategoryID"] = new SelectList(_context.Category, "ID", "ID");
+            ViewData["CategoryID"] = new SelectList(_context.Category, "ID", "Name");
             return View();
         }
 

@@ -57,12 +57,60 @@ namespace BillingSoft.Controllers
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("ID,NumberBill,Date,Subtotal,Iva,Total,SupplierID")] BillPurchase billPurchase)
+        public async Task<IActionResult> Create([Bind("NumberBill,Date,Subtotal,Iva,Total,SupplierID")] BillPurchase billPurchase)
         {
             if (ModelState.IsValid)
             {
                 _context.Add(billPurchase);
                 await _context.SaveChangesAsync();
+
+                //Save Detail
+                var rows = Request.Form["list_detalle"].ToString().Split(',').ToList();
+                foreach (string number in rows)
+                {
+                    var idProduct = Convert.ToInt64(Request.Form["id" + number].ToString());
+                    var product = _context.Product.Where(p=> p.ID == idProduct).SingleOrDefault();
+                    product.Stock = product.Stock + Convert.ToInt32(Request.Form["ca" + number].ToString());
+
+                    _context.Product.Update(product);
+                    _context.SaveChanges();
+
+                    //Next Feature: Add description 
+                    //Save DetailMovement Table
+                    var objectDetailMovement = new DetailMovement();
+                    objectDetailMovement.ProductID = product.ID;
+                    objectDetailMovement.Type = 0; // entry product
+                    objectDetailMovement.Amount = Convert.ToInt32(Request.Form["ca" + number].ToString());
+                    objectDetailMovement.UnitPrice = Convert.ToDecimal(Request.Form["pu"+number].ToString().Replace(".",","));
+                    objectDetailMovement.Stock = product.Stock;
+
+                    _context.DetailMovement.Add(objectDetailMovement);
+                    _context.SaveChanges();
+
+                    //Fixme: Update Cost Price
+                    if (objectDetailMovement.UnitPrice > product.CostPrice)
+                    {
+                        product.CostPrice = objectDetailMovement.UnitPrice;
+                        _context.Product.Update(product);
+                        _context.SaveChanges();
+                    }
+
+                    //Save DetailBillPurchase
+                    var objectDetailBillPurchase = new DetailBillPurchase();
+                    objectDetailBillPurchase.BillPurchaseID = billPurchase.ID;
+                    objectDetailBillPurchase.DetailMovementID = objectDetailMovement.ID;
+                    _context.DetailBillPurchase.Add(objectDetailBillPurchase);
+
+                    _context.SaveChanges();
+                    System.Diagnostics.Debug.WriteLine("IDDetailMovement: ", objectDetailMovement.ID);
+
+
+                    //System.Diagnostics.Debug.WriteLine("Nombre: "+Request.Form["no"+number].ToString());
+
+
+                }
+                //System.Diagnostics.Debug.WriteLine("REQUEST: " + rows.Count);
+                
                 return RedirectToAction("Index");
             }
             ViewData["SupplierID"] = new SelectList(_context.Supplier, "ID", "ID", billPurchase.SupplierID);
@@ -152,14 +200,17 @@ namespace BillingSoft.Controllers
             return RedirectToAction("Index");
         }
 
+        //Ajax Request
         [HttpGet, ActionName("GetInfoSupplier")]
         public ActionResult GetInfoSupplier(string ruc)
         {
             System.Diagnostics.Debug.WriteLine("RUC" + ruc);
-            var result = _context.Supplier.SingleOrDefaultAsync(s=> s.Ruc == ruc);
-            return Content(result.Result!=null ? result.Result.Name.ToString() : "null");
+            var result = _context.Supplier.Where(s=> s.Ruc == ruc);
+            //return Json(result!=null ? result : "null");
+            return Json(result);
         }
 
+        //Ajax request
         [HttpGet, ActionName("GetOneProduct")]
         public ActionResult GetOneProduct(string codigo)
         {
